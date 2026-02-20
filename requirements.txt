@@ -8,6 +8,8 @@ tensorflow
 
 clu
 einops
+diffusers
+huggingface_hub
 transformers
 timm
 
