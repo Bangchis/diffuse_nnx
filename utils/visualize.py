@@ -18,15 +18,15 @@ from samplers import samplers
 
 @functools.partial(
     nnx.jit,
-    static_argnums=(6, 7)
+    static_argnums=(5, 6)
 )
-def sample_fn(net, g_net, encoder, rngs, n, c, guidance_scale, sampler):
+def sample_fn(net, g_net, rngs, n, c, guidance_scale, sampler):
     """:meta private:"""
     x = sampler.sample(
         rngs, net, n, y=c, g_net=g_net,
         guidance_scale=guidance_scale
     )
-    return encoder.decode(x)
+    return x
 
 
 def visualize(
@@ -70,19 +70,21 @@ def visualize(
     logging.info("Generating model samples...")
     
     net.eval()
-    x = sample_fn(
+    z = sample_fn(
         net, g_net if g_net is not None else net,
-        encoder, rngs, n, c, 1.0, sampler
+        rngs, n, c, 1.0, sampler
     )
+    x = encoder.decode(z)
     x = jax.experimental.multihost_utils.process_allgather(x, tiled=True)
     wandb_utils.log_images(x, 'network', step=step)
     net.train()
 
     logging.info("Generating EMA samples...")
-    x = sample_fn(
+    z = sample_fn(
         ema_net, g_net if g_net is not None else ema_net,
-        encoder, rngs, n, c, 1.0, sampler
+        rngs, n, c, 1.0, sampler
     )
+    x = encoder.decode(z)
     x = jax.experimental.multihost_utils.process_allgather(x, tiled=True)
     wandb_utils.log_images(x, 'ema_network', step=step)
 
@@ -91,10 +93,11 @@ def visualize(
 
         guidance_scale = config.visualize.guidance_scale if guidance_scale is None else guidance_scale
 
-        x = sample_fn(
+        z = sample_fn(
             ema_net, g_net if g_net is not None else ema_net,
-            encoder, rngs, n, c, guidance_scale, sampler
+            rngs, n, c, guidance_scale, sampler
         )
+        x = encoder.decode(z)
         x = jax.experimental.multihost_utils.process_allgather(x, tiled=True)
         wandb_utils.log_images(x, f'ema_network_cfg={guidance_scale}', step=step)
 

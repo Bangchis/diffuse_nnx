@@ -44,7 +44,6 @@ class StabilityVAE(nnx.Module):
             return jax.random.PRNGKey(0)
         return self.rngs()
 
-    @nnx.jit
     def encode(self, x: jnp.ndarray, sample_posterior: bool = True, deterministic: bool = True) -> jnp.ndarray:
         # `latent_dataset=True` path: input is already latent, so skip VAE encode.
         if self.encoded_pixels:
@@ -72,7 +71,6 @@ class StabilityVAE(nnx.Module):
         z = self._to_nhwc(z)
         return z * self.scaling_factor
 
-    @nnx.jit
     def decode(self, z: jnp.ndarray, deterministic: bool = True) -> jnp.ndarray:
         del deterministic  # No dropout path in this encoder wrapper.
         z = z.astype(self.dtype) / self.scaling_factor
